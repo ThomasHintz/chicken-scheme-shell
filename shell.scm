@@ -1,12 +1,12 @@
 (use shell)
-(include "../macs/general-macs.scm")
 
-(define-syntax mk-shell-cmd
-  (syntax-rules ()
-    ((mk-shell-cmd cmd)
-     (define-syntax cmd
-       (syntax-rules ()
-         ((cmd . r)
-          (execute '((cmd . r)))))))))
+(define (shell-repl)
+  (let ((x (read)))
+    (if (eq? x 'exit)
+        #t
+        (begin (execute (list x))
+               (newline)
+               (display "#;> ")
+               (shell-repl)))))
 
-(mac-apply mk-shell-cmd ls pwd cat rm touch cd ps grep kill killall mkdir mv top alsamixer nano emacs git)
+(shell-repl)
