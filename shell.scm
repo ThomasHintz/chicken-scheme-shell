@@ -1,4 +1,7 @@
-(use shell)
+(use shell readline regex)
+
+(current-input-port (make-gnu-readline-port))
+(gnu-history-install-file-manager (string-append (or (getenv "HOME") ".") "/.csi.history"))
 
 (define (shell-repl)
   (let ((x (read)))
@@ -6,7 +9,6 @@
         #t
         (begin (execute (list x))
                (newline)
-               (display "#;> ")
                (shell-repl)))))
 
 (shell-repl)
