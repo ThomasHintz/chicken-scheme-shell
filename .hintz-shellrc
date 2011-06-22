@@ -1,0 +1,15 @@
+(require-extension ansi-escape-sequences srfi-19)
+
+(repl-prompt
+ (lambda ()
+   (let ((is-root? (lambda (user) (string=? user "root")))
+         (user (car (user-information (current-user-id)))))
+     (string-append "("
+                    (set-text (if (is-root? user) '(fg-red) '(fg-green))
+                                  (string-append user "@" (or (get-host-name) "")))
+                    ")-("
+                    (current-directory)
+                    ")-("
+                    (date->string (current-date) "~T")
+                    ")"
+                    "\n$ "))))
