@@ -1,10 +1,20 @@
+;;; documentation at http://thintz.com/chicken-scheme-shell
 (use shell readline)
 
+(define (getenv2 e)
+ ;; handles exorcism of getenv from 4.6.4 onwards
+ (handle-exceptions
+  exn
+  (get-environment-variable e)
+  (getenv e)))
+
 (current-input-port (make-gnu-readline-port))
-(gnu-history-install-file-manager (string-append (or (getenv "HOME") ".") "/.csi.history"))
+(gnu-history-install-file-manager
+ (string-append (or (getenv2 "HOME") ".") "/.csi.history"))
 (repl-prompt (lambda () "$ "))
 
-(define config-file (make-parameter (string-append (or (getenv "HOME") ".") "/.hintz-shellrc")))
+(define config-file
+ (make-parameter (string-append (or (getenv2 "HOME") ".") "/.hintz-shellrc")))
 (when (file-exists? (config-file))
   (load (config-file)))
 
