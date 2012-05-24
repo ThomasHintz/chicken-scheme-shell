@@ -1,8 +1,8 @@
 # Makefile for Chicken-scheme shell
 
 cscsh: shell.scm
-	csc shell.scm -o cscsh
+	csc shell.scm -o hiss
 
 .PHONY: clean
 clean:
-	rm -f cscsh
+	rm -f hiss
