@@ -1,5 +1,6 @@
 ;;; documentation at http://thintz.com/chicken-scheme-shell
-(use readline symbol-utils)
+(use readline symbol-utils srfi-1)
+(include "macros.scm")
 
 (define (getenv2 e)
  ;; handles exorcism of getenv from 4.6.4 onwards
@@ -20,6 +21,8 @@
 
 (define exit? (make-parameter #f))
 (define (exit) (exit? #t))
+
+(define (%run-cmd cmd) (with-input-from-pipe cmd read-file))
 
 ; now we can can actually use things in a more lispy way
 ; #;1> (cmd->list "ls" read-line)
@@ -42,16 +45,14 @@
 
 (define (shell-repl)
   (if (exit?)
-       #t
-       (let ((x (read)))
-	 (handle-exceptions
-	  exn
-	  (begin (print-error-message exn)
-		 (display (with-output-to-string (lambda () (print-call-chain)))))
-	  (if (unbound? x)
-	      (run (symbol->string x))
-	      (display (eval x)))
-	  (newline))
-	 (shell-repl))))
+      #t
+      (begin (handle-exceptions
+	      exn
+	      (begin (print-error-message exn)
+		     (display (with-output-to-string (lambda () (print-call-chain)))))
+	      (let ((x (read)))
+		(write (eval x))))
+	     (newline)
+	     (shell-repl))))
 
 (shell-repl)
