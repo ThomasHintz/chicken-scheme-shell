@@ -43,6 +43,8 @@
 
 (define (run cmd) (process-wait (process-run cmd)))
 
+(define (_ . r) (cmd->list (fold (lambda (e o) (++ o " " e)) "" r) read-line))
+
 (define (shell-repl)
   (if (exit?)
       #t
