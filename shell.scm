@@ -15,7 +15,7 @@
 (repl-prompt (lambda () "$ "))
 
 (define config-file
- (make-parameter (string-append (or (getenv2 "HOME") ".") "/.hintz-shellrc")))
+ (make-parameter (string-append (or (getenv2 "HOME") ".") "/.hiss")))
 (when (file-exists? (config-file))
   (load (config-file)))
 
