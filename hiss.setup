@@ -1,0 +1,7 @@
+;;; hiss.setup -*- scheme -*-
+
+(compile -S -O3 -d1 hiss.scm -o hiss)
+
+(install-program 'hiss
+'("hiss")
+`((version "2")))

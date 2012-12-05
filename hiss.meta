@@ -1,0 +1,6 @@
+;;; hiss.meta -*- scheme -*-
+
+((egg "hiss.egg")
+ (synopsis "hiss is a chicken scheme shell.")
+ (license "BSD")
+ (depends readline))

@@ -1,5 +1,5 @@
 ;;; documentation at http://thintz.com/chicken-scheme-shell
-(use readline symbol-utils srfi-1)
+(use readline srfi-1)
 (include "macros.scm")
 
 (define (getenv2 e)
