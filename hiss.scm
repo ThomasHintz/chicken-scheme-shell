@@ -1,49 +1,49 @@
-;;; documentation at http://thintz.com/chicken-scheme-shell
-(use readline srfi-1)
-(include "macros.scm")
+(import chicken scheme)
+(use parley parley-auto-completion srfi-1 apropos posix)
 
-(define (getenv2 e)
- ;; handles exorcism of getenv from 4.6.4 onwards
- (handle-exceptions
-  exn
-  (get-environment-variable e)
-  (getenv e)))
+(set-read-syntax!
+ #\[
+ (lambda (port)
+   (letrec ((read-cmd (lambda (cmd)
+                        (let ((c (peek-char port)))
+                          (cond ((eof-object? c)
+                                 (error "EOF encountered while parsing { ... } clause"))
+                                ((char=? c #\])
+                                 (read-char port)
+                                 cmd)
+                                ((or (char=? c #\') (char=? c #\())
+                                 (read-cmd (string-append cmd (->string (eval (read port))))))
+                                (else
+                                 (read-char port)
+                                 (read-cmd (string-append cmd (->string c)))))))))
+     `(begin (let ((result (with-input-from-pipe ,(read-cmd "") read-lines)))
+               ;(for-each (cut print <>) result)
+               (for-each (lambda (l) (print l)) result)
+               (values #t result))))))
 
-(current-input-port (make-gnu-readline-port))
-(gnu-history-install-file-manager
- (string-append (or (getenv2 "HOME") ".") "/.csi.history"))
-(repl-prompt (lambda () "$ "))
+; match (foo or foo
+(word-class '($ (: (& (~ "(") (~ whitespace)) (+ (~ whitespace)))))
 
-(define config-file
- (make-parameter (string-append (or (getenv2 "HOME") ".") "/.hiss")))
-(when (file-exists? (config-file))
-  (load (config-file)))
+(define (get-completions)
+  (map (lambda (s) (string-append (symbol->string s) " ")) (delete-duplicates! (apropos-list "" macros?: #t))))
+
+(completion-choices (lambda (input position last-word) (get-completions)))
+
+(add-key-binding! #\tab auto-completion-handler)
+
+(let ((old (current-input-port)))
+     (current-input-port (make-parley-port old)))
 
 (define exit? (make-parameter #f))
 (define (exit) (exit? #t))
 
-(define (%run-cmd cmd) (with-input-from-pipe cmd read-file))
+(define line-num (make-parameter 0))
+(define repl-prompt (make-parameter (lambda () (string-append "#;" (number->string (line-num)) "> "))))
 
-; now we can can actually use things in a more lispy way
-; #;1> (cmd->list "ls" read-line)
-; (file1 file2 file3)
-; #;2> (map (lambda (file) (run (string-append "cat " file)))
-;             (cmd->list "ls" read-line))
-; ...contents of all the files in the current directory
-(define (cmd->list cmd read-func)
-  (with-input-from-pipe
-   cmd
-   (lambda ()
-     (letrec ((get-next (lambda (o)
-			  (let ((v (read-func)))
-			    (if (not (eof-object? v))
-				(get-next (cons v o))
-				(reverse o))))))
-       (get-next '())))))
-
-(define (run cmd) (process-wait (process-run cmd)))
-
-(define (_ . r) (cmd->list (fold (lambda (e o) (++ o " " e)) "" r) read-line))
+(define config-file
+ (make-parameter (string-append (or (get-environment-variable "HOME") ".") "/.hiss")))
+(when (file-exists? (config-file))
+  (load (config-file)))
 
 (define (shell-repl)
   (if (exit?)
@@ -52,8 +52,9 @@
 	      exn
 	      (begin (print-error-message exn)
 		     (display (with-output-to-string (lambda () (print-call-chain)))))
-	      (let ((x (read)))
-		(write (eval x))))
+	      (let ((x (with-input-from-string (parley ((repl-prompt))) (lambda () (read)))))
+		(write (eval x))
+                (line-num (+ (line-num) 1))))
 	     (newline)
 	     (shell-repl))))
 
