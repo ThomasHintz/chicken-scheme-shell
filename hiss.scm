@@ -1,33 +1,54 @@
 (import chicken scheme)
-(use parley parley-auto-completion srfi-1 apropos posix)
+(use parley parley-auto-completion srfi-1 apropos posix chicken-syntax)
 
 (set-read-syntax!
  #\[
  (lambda (port)
-   (letrec ((read-cmd (lambda (cmd)
+   (letrec ((read-cmd (lambda (exps)
                         (let ((c (peek-char port)))
                           (cond ((eof-object? c)
-                                 (error "EOF encountered while parsing { ... } clause"))
+                                 (error "EOF encountered while parsing [ ... ] clause"))
                                 ((char=? c #\])
                                  (read-char port)
-                                 cmd)
+                                 exps)
                                 ((or (char=? c #\') (char=? c #\())
-                                 (read-cmd (string-append cmd (->string (eval (read port))))))
+                                 (read-cmd (cons (read port) exps)))
                                 (else
                                  (read-char port)
-                                 (read-cmd (string-append cmd (->string c)))))))))
-     `(begin (let ((result (with-input-from-pipe ,(read-cmd "") read-lines)))
-               ;(for-each (cut print <>) result)
-               (for-each (lambda (l) (print l)) result)
-               (values #t result))))))
+                                 (read-cmd (cons (->string c) exps))))))))
+     `(lambda ()
+        (let ((result (with-input-from-pipe (string-append ,@(reverse (read-cmd '()))) read-lines)))
+          (for-each (cut print <>) result)
+          (values #t result))))))
 
 ; match (foo or foo
-(word-class '($ (: (& (~ "(") (~ whitespace)) (+ (~ whitespace)))))
+(word-class '($ (: (& (~ (or "(" "[")) (~ whitespace)) (+ (~ whitespace)))))
 
-(define (get-completions)
-  (map (lambda (s) (string-append (symbol->string s) " ")) (delete-duplicates! (apropos-list "" macros?: #t))))
+(define (get-scheme-completions)
+  (map (lambda (s)
+         (string-append s " "))
+       (delete-duplicates!
+        (map (lambda (sym)
+               (let ((string-sym (symbol->string sym)))
+                 (if (not (substring-index "#" string-sym))
+                          string-sym
+                          (cadr (string-split string-sym "#")))))
+             (apropos-list "" macros?: #t)))))
 
-(completion-choices (lambda (input position last-word) (get-completions)))
+(define (get-shell-completions)
+  (let ((paths (string-split (get-environment-variable "PATH") ":")))
+    (delete-duplicates!
+     (flatten
+      (map (lambda (files) (map (cut string-append <> " ") files))
+           (map (cut directory <>) paths))))))
+
+(completion-choices (lambda (input position last-word)
+                      (let* ((full-line (string-append input last-word))
+                             (paren-pos (or (substring-index "(" full-line) -1))
+                             (bracket-pos (or (substring-index "[" full-line) -1)))
+                        (if (> paren-pos bracket-pos)
+                            (get-scheme-completions)
+                            (get-shell-completions)))))
 
 (add-key-binding! #\tab auto-completion-handler)
 
@@ -49,13 +70,12 @@
   (if (exit?)
       #t
       (begin (handle-exceptions
-	      exn
-	      (begin (print-error-message exn)
-		     (display (with-output-to-string (lambda () (print-call-chain)))))
-	      (let ((x (with-input-from-string (parley ((repl-prompt))) (lambda () (read)))))
-		(write (eval x))
-                (line-num (+ (line-num) 1))))
-	     (newline)
-	     (shell-repl))))
+              exn
+              (begin (print-error-message exn)
+                     (display (with-output-to-string (lambda () (print-call-chain)))))
+              (let ((x (with-input-from-string (parley ((repl-prompt))) (lambda () (read)))))
+                (write (eval x))))
+             (newline)
+             (shell-repl))))
 
 (shell-repl)

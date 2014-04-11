@@ -1,3 +1,4 @@
 (import chicken scheme)
+(use chicken-syntax)
 
-(print (eval (read)))
+(print (eval `(begin (import chicken) ,(read))))
