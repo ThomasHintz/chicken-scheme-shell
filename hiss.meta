@@ -3,4 +3,4 @@
 ((egg "hiss.egg")
  (synopsis "hiss is a chicken scheme shell.")
  (license "BSD")
- (depends readline))
+ (depends parley apropos scsh-process))

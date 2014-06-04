@@ -4,4 +4,4 @@
 
 (install-program 'hiss
 '("hiss")
-`((version "2")))
+`((version "0.0.1")))

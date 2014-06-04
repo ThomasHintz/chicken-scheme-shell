@@ -1,25 +1,5 @@
 (import chicken scheme)
-(use parley parley-auto-completion srfi-1 apropos posix chicken-syntax)
-
-(set-read-syntax!
- #\[
- (lambda (port)
-   (letrec ((read-cmd (lambda (exps)
-                        (let ((c (peek-char port)))
-                          (cond ((eof-object? c)
-                                 (error "EOF encountered while parsing [ ... ] clause"))
-                                ((char=? c #\])
-                                 (read-char port)
-                                 exps)
-                                ((or (char=? c #\') (char=? c #\())
-                                 (read-cmd (cons (read port) exps)))
-                                (else
-                                 (read-char port)
-                                 (read-cmd (cons (->string c) exps))))))))
-     `(lambda ()
-        (let ((result (with-input-from-pipe (string-append ,@(reverse (read-cmd '()))) read-lines)))
-          (for-each (cut print <>) result)
-          (values #t result))))))
+(use parley parley-auto-completion srfi-1 apropos posix chicken-syntax scsh-process)
 
 ; match (foo or foo
 (word-class '($ (: (& (~ (or "(" "[")) (~ whitespace)) (+ (~ whitespace)))))
@@ -63,8 +43,6 @@
 
 (define config-file
  (make-parameter (string-append (or (get-environment-variable "HOME") ".") "/.hiss")))
-(when (file-exists? (config-file))
-  (load (config-file)))
 
 (define (shell-repl)
   (if (exit?)
@@ -78,4 +56,7 @@
              (newline)
              (shell-repl))))
 
-(shell-repl)
+(begin
+  (when (file-exists? (config-file))
+        (load (config-file)))
+  (shell-repl))
