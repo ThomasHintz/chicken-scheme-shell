@@ -1,1 +1,1 @@
-[documentation](http://thintz.com/chicken-scheme-shell)
+[documentation](http://thintz.com/projects/hiss)
